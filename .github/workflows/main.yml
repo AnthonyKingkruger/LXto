@@ -1,4 +1,4 @@
-name: FREE FRANCE RDP (LocalXpose Edition)
+name: FREE FRANCE RDP (LocalXpose Edition - Fully Fixed)
 
 on:
   workflow_dispatch:
@@ -9,10 +9,16 @@ jobs:
 
     steps:
 
+    # -------------------------------
+    # SYSTEM UPDATE
+    # -------------------------------
     - name: Update System
       run: |
         sudo apt update -y
 
+    # -------------------------------
+    # DESKTOP + XRDP SETUP
+    # -------------------------------
     - name: Install Desktop + XRDP
       run: |
         sudo apt install xfce4 xfce4-goodies xorg dbus-x11 x11-xserver-utils -y
@@ -21,6 +27,9 @@ jobs:
         sudo systemctl restart xrdp
         echo "Skipping password change (GitHub blocks chpasswd)"
 
+    # -------------------------------
+    # BROWSERS
+    # -------------------------------
     - name: Install Chrome
       run: |
         wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
@@ -30,33 +39,46 @@ jobs:
       run: |
         sudo apt install firefox -y
 
+    # -------------------------------
+    # LOCALXPOSE INSTALLATION (FIXED)
+    # -------------------------------
     - name: Install LocalXpose
       run: |
         wget -qO lx.tar.gz https://api.localxpose.io/v2/downloads/linux/64bit
         tar -xf lx.tar.gz
-        sudo mv ./localxpose /usr/local/bin/lx
+        BIN=$(find . -type f -name "localxpose" -o -name "lx" | head -n 1)
+        sudo mv "$BIN" /usr/local/bin/lx
         sudo chmod +x /usr/local/bin/lx
 
+    # -------------------------------
+    # LOGIN LOCALXPOSE
+    # -------------------------------
     - name: Login LocalXpose
       env:
         LX_TOKEN: ${{ secrets.LX_TOKEN }}
       run: |
         lx account login --token $LX_TOKEN
 
-    - name: Start RDP Tunnel via LocalXpose
+    # -------------------------------
+    # START TCP RDP TUNNEL
+    # -------------------------------
+    - name: Start RDP Tunnel
       run: |
         nohup lx tunnel tcp --port 3389 > lx.log 2>&1 &
         sleep 10
 
+    # -------------------------------
+    # SHOW CONNECTION DETAILS
+    # -------------------------------
     - name: Show RDP Details
       run: |
         echo "=============================================="
-        echo "        FREE FRANCE RDP (LOCALXPOSE)          "
+        echo "          FREE FRANCE RDP (LOCALXPOSE)        "
         echo "----------------------------------------------"
         echo "USERNAME: ubuntu"
         echo "PASSWORD: (press Enter, no password)"
         echo "----------------------------------------------"
         echo "YOUR RDP TCP ADDRESS:"
-        cat lx.log | grep -oP 'tcp://\K.*'
+        grep -oP 'tcp://\K.*' lx.log
         echo "=============================================="
         sleep 21600
