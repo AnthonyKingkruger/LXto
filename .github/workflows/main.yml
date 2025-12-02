@@ -1,0 +1,62 @@
+name: FREE FRANCE RDP (LocalXpose Edition)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Update System
+      run: |
+        sudo apt update -y
+
+    - name: Install Desktop + XRDP
+      run: |
+        sudo apt install xfce4 xfce4-goodies xorg dbus-x11 x11-xserver-utils -y
+        sudo apt install xrdp -y
+        sudo systemctl enable xrdp
+        sudo systemctl restart xrdp
+        echo "Skipping password change (GitHub blocks chpasswd)"
+
+    - name: Install Chrome
+      run: |
+        wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+        sudo apt install -f ./google-chrome-stable_current_amd64.deb -y
+
+    - name: Install Firefox
+      run: |
+        sudo apt install firefox -y
+
+    - name: Install LocalXpose
+      run: |
+        wget -qO lx.tar.gz https://api.localxpose.io/v2/downloads/linux/64bit
+        tar -xf lx.tar.gz
+        sudo mv ./localxpose /usr/local/bin/lx
+        sudo chmod +x /usr/local/bin/lx
+
+    - name: Login LocalXpose
+      env:
+        LX_TOKEN: ${{ secrets.LX_TOKEN }}
+      run: |
+        lx account login --token $LX_TOKEN
+
+    - name: Start RDP Tunnel via LocalXpose
+      run: |
+        nohup lx tunnel tcp --port 3389 > lx.log 2>&1 &
+        sleep 10
+
+    - name: Show RDP Details
+      run: |
+        echo "=============================================="
+        echo "        FREE FRANCE RDP (LOCALXPOSE)          "
+        echo "----------------------------------------------"
+        echo "USERNAME: ubuntu"
+        echo "PASSWORD: (press Enter, no password)"
+        echo "----------------------------------------------"
+        echo "YOUR RDP TCP ADDRESS:"
+        cat lx.log | grep -oP 'tcp://\K.*'
+        echo "=============================================="
+        sleep 21600
